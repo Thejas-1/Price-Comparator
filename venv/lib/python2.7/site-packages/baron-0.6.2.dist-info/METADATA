@@ -1,0 +1,276 @@
+Metadata-Version: 2.0
+Name: baron
+Version: 0.6.2
+Summary: Full Syntax Tree for python to make writing refactoring code a realist task
+Home-page: https://github.com/Psycojoker/baron
+Author: Laurent Peuch
+Author-email: cortex@worlddomination.be
+License: lgplv3+
+Keywords: ast fst refactoring syntax tree
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.2
+Classifier: Programming Language :: Python :: 3.3
+Classifier: License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Code Generators
+Classifier: Topic :: Software Development :: Libraries
+Requires-Dist: rply
+
+Introduction
+============
+
+Baron is a Full Syntax Tree (FST) library for Python. By opposition to an [AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree) which
+drops some syntax information in the process of its creation (like empty lines,
+comments, formatting), a FST keeps everything and guarantees the operation
+<code>fst\_to\_code(code\_to\_fst(source\_code)) == source\_code</code>.
+
+Installation
+============
+
+    pip install baron
+
+Basic Usage
+===========
+
+```python
+from baron import parse, dumps
+
+fst = parse(source_code_string)
+source_code_string == dumps(fst)
+```
+
+Except if you want to do low level things, **use
+[RedBaron](https://github.com/Psycojoker/redbaron) instead of using Baron
+directly**. Think of Baron as the "bytecode of python source code" and RedBaron
+as some sort of usable layer on top of it.
+
+If you don't know what Baron is or don't understand yet why it might be
+useful for you, read the [« Why is this important? » section](#why-is-this-important).
+
+Documentation
+=============
+
+Baron documentation is available on [Read The Docs](http://baron.readthedocs.org/en/latest/).
+
+Why is this important?
+======================
+
+The usage of a FST might not be obvious at first sight so let's consider a
+series of problems to illustrate it. Let's say that you want to write a program that will:
+
+* rename a variable in a source file... without clashing with things that are not a variable (example: stuff inside a string)
+* inline a function/method
+* extract a function/method from a series of line of code
+* split a class into several classes
+* split a file into several modules
+* convert your whole code base from one ORM to another
+* do custom refactoring operation not implemented by IDE/rope
+* implement the class browser of smalltalk for python (the whole one where you can edit the code of the methods, not just showing code)
+
+It is very likely that you will end up with the awkward feeling of writing
+clumpsy weak code that is very likely to break because you didn't thought about
+all the annoying special cases and the formatting keeps bothering you. You may
+end up playing with [ast.py](http://docs.python.org/2/library/ast.html) until
+you realize that it removes too much information to be suitable for those
+situations. You will probably ditch this task as simple too complicated and
+really not worth the effort. You are missing a good abstraction that will take
+care of all of the code structure and formatting for you so you can concentrate
+on your task.
+
+The FST tries to be this abstraction. With it you can now work on a tree which
+represents your code with its formatting. Moreover, since it is the exact
+representation of your code, modifying it and converting it back to a string
+will give you back your code only modified where you have modified the tree.
+
+Said in another way, what I'm trying to achieve with Baron is a paradigm change in
+which writing code that will modify code is now a realist task that is worth
+the price (I'm not saying a simple task, but a realistic one: it's still a
+complex task).
+
+Other
+-----
+
+Having a FST (or at least a good abstraction build on it) also makes it easier
+to do code generation and code analysis while those two operations are already
+quite feasible (using [ast.py](http://docs.python.org/2/library/ast.html) 
+and a templating engine for example).
+
+Some technical details
+======================
+
+Baron produces a FST in the form of JSON (and by JSON I mean Python lists
+and dicts that can be dumped into JSON) for maximum interoperability.
+
+Baron FST is quite similar to Python AST with some modifications to be more
+intuitive to humans, since Python AST has been made for CPython interpreter.
+
+Since playing directly with JSON is a bit raw I'm going to build an abstraction
+on top of it that will looks like BeautifulSoup/jQuery.
+
+State of the project
+====================
+
+Currently, Baron has been tested on the top 100 projects and the FST converts
+back exactly into the original source code. So, it can be considered quite
+stable, but it is far away from having been battle tested.
+
+Since the project is very young and no one is already using it except my
+project, I'm open to changes of the FST nodes but I will quickly become
+conservative once it gets some adoption and will probably accept to
+modify it only once or twice in the future with clear indications on how to
+migrate.
+
+**Baron is targeting python 2.[67]**. It has not been tested on python3 but
+should be working for most parts (except the new grammar like <code>yield from</code>,
+obviously). Baron **runs** under python 2 and python 3.
+
+Tests
+=====
+Run either `py.test tests/` or `nosetests` in the baron directory.
+
+Community
+=========
+
+You can reach us on [irc.freenode.net#baron](https://webchat.freenode.net/?channels=%23baron).
+
+Misc
+====
+[Old blog post announcing the project.](http://worlddomination.be/blog/2013/the-baron-project-part-1-what-and-why.html) Not that much up to date.
+
+
+Changelog
+=========
+
+0.6.2 (unreleased)
+------------------
+
+- fix race condition when generating parser cache file
+- make all user-facing errors inherit from the same BaronError class
+- fix: dotted_name and float_exponant_complex were missing from
+  nodes_rendering_order
+
+0.6.1 (2015-01-31)
+------------------
+
+- fix: the string was having a greedy behavior on grouping the string tokens
+  surrounding it (for string chains), this ends up creating an inconsistancy in
+  the way string was grouped in general
+- fix: better number parsing handling, everything isn't fixed yet
+- make all (expected) errors inherit from the same BaronError class
+- fix: parsing fails correctly if a quoted string is not closed
+
+0.6 (2014-12-11)
+----------------
+
+- FST structure modification: def_argument_tuple is no more and all arguments
+  now have a coherent structure:
+  * def_argument node name attribute has been renamed to target, like in assign
+  * target attribute now points to a dict, not to a string
+  * old name -> string are now target -> name_node
+  * def_argument_tuple is now a def_argument where target points to a tuple
+  * this specific tuple will only has name and comma and tuple members (no more
+    def_argument for name)
+- new node: long, before int and long where merged but that was causing problems
+
+0.5 (2014-11-10)
+----------------
+
+- rename "funcdef" node to "def" node to be way more intuitive.
+
+0.4 (2014-09-29)
+----------------
+
+- new rendering type in the nodes_rendering_order dictionary: string. This
+  remove an ambiguity where a key could be pointing to a dict or a string, thus
+  forcing third party tools to do guessing.
+
+0.3.1 (2014-09-04)
+------------------
+
+- setup.py wasn't working if wheel wasn't used because the CHANGELOG file
+  wasn't included in the MANIFEST.in
+
+0.3 (2014-08-21)
+----------------
+
+- path becomes a simple list and is easier to deal with
+- bounding box allows you to know the left most and right most position
+  of a node see https://baron.readthedocs.org/en/latest/#bounding-box
+- redbaron is classified as supporting python3
+  https://github.com/Psycojoker/baron/pull/51
+- ensure than when a key is a string, it's empty value is an empty string and
+  not None to avoid breaking libs that use introspection to guess the type of
+  the key
+- key renaming in the FST: "delimiteur" -> "delimiter"
+- name_as_name and dotted_as_name node don't have the "as" key anymore as it
+  was useless (it can be deduce from the state of the "target" key)
+- dotted_name node doesn't exist anymore, its existance was unjustified. In
+  import, from_import and decorator node, it has been replaced from a key to a
+  dict (with only a list inside of it) to a simple list.
+- dumps now accept a strict boolean argument to check the validity of the FST
+  on dumping, but this isn't that much a public feature and should probably be
+  changed of API in the futur
+- name_as_name and dotted_as_name empty value for target is now an empty string
+  and not None since this is a string type key
+- boundingbox now includes the newlines at the end of a node
+- all raised exceptions inherit from a common base exception to ease try/catch
+  constructions
+- Position's left and right functions become properties and thus
+  attributes
+- Position objects can be compared to other Position objects or any
+  iterables
+- make_position and make_bounding_box functions are deleted in favor of
+  always using the corresponding class' constructor
+
+0.2 (2014-06-11)
+----------------
+
+- Baron now provides documentation on https://baron.readthedocs.org
+- feature: baron now run in python3 (*but* doesn't implement the full python3
+  grammar yet) by Pierre Penninckx https://github.com/ibizaman
+- feature: drop the usage of ast.py to find print_function, this allow any
+  version of python to parse any other version of python also by Pierre
+  Penninckx
+- fix: rare bug where a comment end up being confused as an indentation level
+- 2 new helpers: show_file and show_node, see https://baron.readthedocs.org/en/latest/#show-file
+  and https://baron.readthedocs.org/en/latest/#show-node
+- new dictionary that provides the informations on how to render a FST node:
+  nodes_rendering_order see https://baron.readthedocs.org/en/latest/#rendering-the-fst
+- new utilities to find a node, see https://baron.readthedocs.org/en/latest/#locate-a-node
+- new generic class that provide templates to work on the FST see
+  https://baron.readthedocs.org/en/latest/#rendering-the-fst
+
+0.1.3 (2014-04-13)
+------------------
+
+- set sugar syntaxic notation wasn't handled by the dumper (apparently no one
+  use this on pypi top 100)
+
+0.1.2 (2014-04-08)
+------------------
+
+- baron.dumps now accept a single FST node, it was only working with a list of
+  FST nodes
+- don't add a endl node at the end if not present in the input string
+- de-uniformise call_arguments and function_arguments node, this is just
+  creating more problems that anything else
+- fix https://github.com/Psycojoker/redbaron/issues/4
+- fix the fact that baron can't parse "{1,}" (but "{1}" is working)
+
+0.1.1 (2014-03-23)
+------------------
+
+- It appears that I don't know how to write MANIFEST.in correctly
+
+
+0.1 (2014-03-22)
+----------------
+
+- Init
+
+
